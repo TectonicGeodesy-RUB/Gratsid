@@ -36,10 +36,10 @@ def generate_options():
     options['fractional_tolerance'] = 0.02  ## fraction that the solution must increase by or else convergence criterion triggered
     options['max_TOs'] = 15  ## Max number of Transient Onsets to allow in each solution
     options['gradient_descent'] = False
-    options['frac']= 0.5  ## if you allow seasonal to vary by 20% from year to year, frac=0.2
+    options['frac'] = 0.5  ## if you allow seasonal to vary by 20% from year to year, frac=0.2
     options['S_each_side'] = 90  ## later need to make 90 corresponding to a hyperparam
-    options['max_its'] = 1_000 ## maximum # iterations for a single gradient descent
-    options['chances'] = 100 ### number of iterations to wait for non-improved fit during gradient descent
+    options['max_its'] = 450 ## maximum # iterations for a single gradient descent
+    options['chances'] = 50 ### number of iterations to wait for non-improved fit during gradient descent
     options['min_frac_improvement'] = 1e-2  ## the fractional improvement in fit needed to consider that the solution has improved (during gradient descent)
     options['lrate'] = 1e-2  ## learning rate of the optimizer used for gradient descent
     options['damp'] = 1e-9  ## damping to apply in the evaluation of cost (for both Solution of Normal Equations and for gradient descent)
