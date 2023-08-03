@@ -35,6 +35,9 @@ def generate_options():
     options['order_rooted_polynomial'] = 1 # must be greater than 0
     options['fractional_tolerance'] = 0.02  ## fraction that the solution must increase by or else convergence criterion triggered
     options['max_TOs'] = 15  ## Max number of Transient Onsets to allow in each solution
+    options['res_each_side'] = 15  ## smoothing the residual with median filter with num elements each side controlled by this value.  This helps find candidate transient onsets in particularly noisy time series
+    
+    
     options['gradient_descent'] = False
     options['frac'] = 0.5  ## if you allow seasonal to vary by 20% from year to year, frac=0.2
     options['S_each_side'] = 90  ## later need to make 90 corresponding to a hyperparam
@@ -455,11 +458,14 @@ def multi_fit_predict_SNE(G_in,y_in,err_in,options):
 ### Finding transient onsets in residual
 ############################################################################
     
-def find_TO(y,quarantined_list,max_TOs):
+def find_TO(y,quarantined_list,options):
+    n_search = options['n_search']
+    res_each_side = options['res_each_side']
+    
     ## for each component of the input time series, finding TOs
     TO_all_components = []
     for i in range(y.shape[1]):
-        TO_all_components.append(list(find_TO_locations(y[:,i],quarantined_list,max_TOs)))
+        TO_all_components.append(list(find_TO_locations(y[:,i],quarantined_list,n_search,res_each_side)))
     ## Returning a list of the unique TOs from list of each component
     do_loop = any(isinstance(i, list) for i in TO_all_components)
     if do_loop == True:
@@ -470,9 +476,20 @@ def find_TO(y,quarantined_list,max_TOs):
         new_list = TO_all_components
     return list(np.unique(new_list))
 
-def find_TO_locations(y,quarantined_list,max_TOs):    
+def find_TO_locations(y,quarantined_list,n_search,res_each_side):    
+    y_smooth = np.zeros(y.size)
+    for i in range(y.size):
+        pp = np.arange((i-res_each_side),(i+res_each_side+1),1)
+        pp = pp[pp>0]
+        pp = pp[pp<y.size]
+        
+        y_smooth[i] = np.nanmedian(\
+                        y[pp],\
+                        axis=0)
+    
+    
     available = np.arange(y.size)
-    i_mf = np.hstack([available[:,None],np.abs(y[:,None]),y[:,None]])
+    i_mf = np.hstack([available[:,None],np.abs(y_smooth[:,None]),y_smooth[:,None]])
     i_mf = my_sortrows(i_mf,[1],[-1])
     i_mf = i_mf[~np.isin(i_mf[:,0],quarantined_list),:]
     available = available[~np.isin(available,quarantined_list)]
@@ -485,10 +502,10 @@ def find_TO_locations(y,quarantined_list,max_TOs):
         ## According to the sign of this peak misfit, finding the indices  
         ## that the zero crossings occur either side of this peak (bb,aa).
         sgn_peak = np.sign(i_mf[0,2])  # getting sign of the peak residual
-        bb = available[available<ii][np.sign(y[available][available<ii])==-1*np.sign(sgn_peak)]  # finding zero crossing before peak
+        bb = available[available<ii][np.sign(y_smooth[available][available<ii])==-1*np.sign(sgn_peak)]  # finding zero crossing before peak
         if bb.size>0:
             bb = bb[-1]
-        aa = available[available>ii][np.sign(y[available][available>ii])==-1*np.sign(sgn_peak)] # finding zero crossing after peak 
+        aa = available[available>ii][np.sign(y_smooth[available][available>ii])==-1*np.sign(sgn_peak)] # finding zero crossing after peak 
         if aa.size>0:
             aa = aa[0]
         ## Now having established zero crossings, outputting TOs and eliminating available points in time series    
@@ -512,7 +529,7 @@ def find_TO_locations(y,quarantined_list,max_TOs):
             available = available[(available>aa)>0]
         if (bb.size==0)*(aa.size==0):
             continue_loop = False
-        if (available.size>2)*(len(TO_list)<max_TOs)==0:
+        if (available.size>2)*(len(TO_list)<n_search)==0:
             continue_loop = False
     return TO_list
 

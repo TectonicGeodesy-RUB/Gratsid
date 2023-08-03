@@ -39,7 +39,8 @@ def do_initial_fit(x, y, err, options, known_steps):
         ## setting optimizer
         ### future version will allow choice of optimizer...
         if options['opt_name'] == 'Adam':
-            options['opt'] = tf.keras.optimizers.Adam()
+            options['opt'] = tf.keras.optimizers.legacy.Adam()
+            
             ### doing fit
         residual, current_misfit, m, W_out = \
             single_fit_predict_GD(G_perm, y, err, options)
@@ -68,7 +69,7 @@ def initialize_before_while(residual_val):
 
 def find_new_transient_onsets(residual, quarantine_list, options, \
                               x, err, perm_steps_list):
-    TO_list = find_TO(residual, quarantine_list, options['n_search'])  ### returns a python list
+    TO_list = find_TO(residual, quarantine_list, options)  ### returns a python list
     G_TOs = make_TO_G_lists(options=options, x=x,
                             TO_list=TO_list)  ## with this python list making lists of greens functions lists depending on how many types of transients allowed
     candidates_table = evaluate_candidate_TOs(TO_list,

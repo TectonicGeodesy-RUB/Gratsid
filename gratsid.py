@@ -60,7 +60,7 @@ in the gratsid_fit function, to output the trajectory model and residuals.
 from gratsid_iteration_stages import *
 
 
-def gratsid_fit(x, y, err, known_steps, options):
+def gratsid_fit(x,y,err,known_steps,options):
     options_out = options.copy()
 
     ######################################
@@ -181,7 +181,8 @@ def fit_decompose(x, y, err, sols, perm_table, options):
         if options['gradient_descent'] == True:
 
             if options['opt_name'] == 'Adam':
-                options['opt'] = tf.keras.optimizers.Adam()
+                options['opt'] = tf.keras.optimizers.legacy.Adam()
+            
             options['osc_cols'] = np.arange(m_keys.size)[m_keys == 2]  ### to be used as a global variable
             options['S'] = my_temporal_smoothing(G.shape[0], options['S_each_side'])
             options['W'] = np.random.randn(G.shape[0], len(options['osc_cols']))
