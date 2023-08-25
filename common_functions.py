@@ -9,6 +9,7 @@ Created on Fri Jun 30 13:23:23 2023
 import numpy as np
 import tensorflow as tf
 import scipy
+from scipy import linalg
 import itertools
 
 def generate_options():
