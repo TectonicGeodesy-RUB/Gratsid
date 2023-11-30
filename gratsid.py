@@ -6,8 +6,13 @@ Created on Fri Jun 30 11:32:16 2023
 This module contains:
     
 - 'gratsid_fit' function for performing gratsid algorithm
+
 - 'fit_decompose' function for fitting time series given 
    the tables output by gratsid and the options dictionary
+
+- 'fit_return_all_oscillations' similar to 'fit_decompose' except
+    that the function returns the separate oscillations for each
+    assumed periodicity in the time series
 
 When importing functions from gratsid.py, you also import functions that 
 are imported in other modules.
@@ -200,3 +205,42 @@ def fit_decompose(x, y, err, sols, perm_table, options):
         signal[-1].append(residual)
 
     return signal
+
+def fit_return_all_oscillations(x,y,err,sols,perm_table,options):
+    if len(y.shape)<2:
+            y = y.reshape(y.size,1)
+            if err!=None:
+                if len(err.shape)<2:
+                    err = err.reshape(err.size,1)        
+    
+    osc_by_period = []
+    for i in range(len(options['osc_periods'])):
+        osc_by_period.append([])
+        
+    for i in range(len(sols)):
+        table = np.vstack([perm_table,sols[i][-1]])
+        G, m_keys = assemble_G_return_keys(x,table,options)
+            
+        if options['gradient_descent'] == True:
+                
+            if options['opt_name'] == 'Adam':
+                options['opt'] = tf.keras.optimizers.Adam()
+            options['osc_cols'] = np.arange(m_keys.size)[m_keys==2]### to be used as a global variable
+            options['S'] = my_temporal_smoothing(G.shape[0],options['S_each_side'])
+            options['W'] = np.random.randn(G.shape[0],len(options['osc_cols']))
+            options['W'] = tf.convert_to_tensor(options['W'].astype('float32'))
+            residual, misfit, m, W_best = \
+            single_fit_predict_GD(G,y,err,options)
+            ### Now making a new G so that we can get predictions with distored oscillations
+            G = distort_osc_G(G,W_best,options)
+            
+        else:
+            residual,residual_val, m = single_fit_predict_SNE(G,y,err,options)
+            
+        #### isolating the different oscillations for different periods
+        G_osc = G[:,m_keys==2]
+        m_osc = m[m_keys==2]
+        for j in range(len(options['osc_periods'])):
+            osc_by_period[j].append(np.matmul(G_osc[:,2*j:2*j+2],m_osc[2*j:2*j+2]))
+    
+    return osc_by_period
